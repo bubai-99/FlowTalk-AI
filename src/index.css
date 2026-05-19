@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-teams-primary: #6264A7;
+  --color-teams-hover: #4b4d8d;
+  --color-ai-gradient-from: #6264A7;
+  --color-ai-gradient-to: #8B5CF6;
+}
+
+@layer base {
+  body {
+    @apply font-sans m-0 antialiased bg-[#F5F5F5];
+  }
+}
+

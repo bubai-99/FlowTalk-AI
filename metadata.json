@@ -1,0 +1,8 @@
+{
+  "name": "FlowTalk AI",
+  "description": "A Microsoft Teams overlay concept that transforms natural thoughts in any language into professional English messages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
