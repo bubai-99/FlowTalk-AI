@@ -7,6 +7,18 @@ export interface Message {
 
 export type Tone = 'casual' | 'professional' | 'executive';
 
+export interface SavedConversation {
+  id: string;
+  timestamp: string;
+  app: string;
+  tone: Tone;
+  sourceLang: string;
+  targetLang: string;
+  original: string;
+  rewritten: string;
+  targetInfo?: string;
+}
+
 export const INITIAL_MESSAGES: Message[] = [
   {
     id: '0',

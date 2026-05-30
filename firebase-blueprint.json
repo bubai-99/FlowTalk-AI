@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account registration, subscription levels, credentials, and credits",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The Firebase User UID matching authentication" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User visual display name" },
+        "plan": { "type": "string", "enum": ["Free", "Pro", "Enterprise"], "description": "Subscription tier" },
+        "credits": { "type": "number", "description": "Available AI processing credits" },
+        "customGeminiKey": { "type": "string", "description": "User provided Gemini AI API Key" },
+        "isAdmin": { "type": "boolean", "description": "Flag enabling global configuration dashboard access" },
+        "blocked": { "type": "boolean", "description": "Administrative suspend status flag" },
+        "createdAt": { "type": "string", "description": "Timestamp indicating registration date" },
+        "updatedAt": { "type": "string", "description": "Timestamp tracking update history" }
+      },
+      "required": ["uid", "email", "plan", "credits", "isAdmin"]
+    },
+    "SavedConversation": {
+      "title": "Saved Conversation",
+      "description": "Historical log of translated and rewritten messaging content",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique record identifier" },
+        "userId": { "type": "string", "description": "Owner identifier matching authentication" },
+        "app": { "type": "string", "description": "Target messenger context" },
+        "tone": { "type": "string", "enum": ["casual", "professional", "executive"], "description": "Selected rewriting tone style" },
+        "sourceLang": { "type": "string", "description": "Automatic detected source language code" },
+        "targetLang": { "type": "string", "description": "Target language code" },
+        "original": { "type": "string", "description": "Original raw input prompt from user" },
+        "rewritten": { "type": "string", "description": "High quality AI generated output text" },
+        "timestamp": { "type": "string", "description": "Chronological generation timestamp" }
+      },
+      "required": ["id", "userId", "app", "tone", "original", "rewritten", "timestamp"]
+    },
+    "Transaction": {
+      "title": "Transactions",
+      "description": "Financial records tracing licensing fees and credit purchases",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Purchase transaction ID" },
+        "userId": { "type": "string", "description": "Buyer user identity uid" },
+        "email": { "type": "string", "description": "Buyer email address" },
+        "plan": { "type": "string", "description": "Licensing plan purchased" },
+        "amount": { "type": "number", "description": "Transactional cost in USD" },
+        "creditsAdded": { "type": "number", "description": "Amount of platform credits added" },
+        "timestamp": { "type": "string", "description": "Transaction date" }
+      },
+      "required": ["id", "userId", "plan", "amount", "creditsAdded", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Stores user configurations, custom keys, and subscription plan settings"
+    },
+    "users/{userId}/saved_conversations/{conversationId}": {
+      "schema": "SavedConversation",
+      "description": "Log of saved smart rewrites for cross-device alignment"
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Audit trail logs tracking financial purchases and subscription license tiers"
+    }
+  }
+}
