@@ -54,7 +54,6 @@ interface UserContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string, name: string) => Promise<void>;
-  loginAsGuest: (email: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   updateCustomApiKey: (key: string) => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
@@ -89,22 +88,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 1. Monitor user authentication
   useEffect(() => {
-    const savedGuestUser = localStorage.getItem('flowtalk_guest_user');
-    const savedGuestProfile = localStorage.getItem('flowtalk_guest_profile');
-    if (savedGuestUser && savedGuestProfile) {
-      setCurrentUser(JSON.parse(savedGuestUser));
-      setUserProfile(JSON.parse(savedGuestProfile));
-      
-      const savedTxs = localStorage.getItem('flowtalk_guest_txs');
-      if (savedTxs) {
-        setTransactions(JSON.parse(savedTxs));
-      }
-      setLoading(false);
-      return;
-    }
+    // Thoroughly remove any cached/legacy guest sessions to respect production account setups
+    localStorage.removeItem('flowtalk_guest_user');
+    localStorage.removeItem('flowtalk_guest_profile');
+    localStorage.removeItem('flowtalk_guest_txs');
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (localStorage.getItem('flowtalk_guest_user')) return;
       setCurrentUser(user);
       if (!user) {
         setUserProfile(null);
@@ -122,13 +111,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // 2. Load conversations and user profile real-time snapshots
   useEffect(() => {
     if (!currentUser) return;
-    if (currentUser.uid.startsWith('guest_')) {
-      const savedTxs = localStorage.getItem('flowtalk_guest_txs');
-      if (savedTxs) {
-        setTransactions(JSON.parse(savedTxs));
-      }
-      return;
-    }
 
     const profileRef = doc(db, 'users', currentUser.uid);
     const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
@@ -200,6 +182,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error("Login failure", err);
       setLoading(false);
+      throw err;
     }
   };
 
@@ -244,43 +227,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginAsGuest = async (email: string, name: string) => {
-    setLoading(true);
-    try {
-      const guestUid = 'guest_' + Math.floor(100000 + Math.random() * 900000);
-      const mockUser = {
-        uid: guestUid,
-        email: email,
-        displayName: name,
-        emailVerified: true
-      } as any as FirebaseUser;
-
-      const mockProfile: UserProfile = {
-        uid: guestUid,
-        email: email,
-        displayName: name,
-        plan: 'Free',
-        credits: 500,
-        isAdmin: true, // Auto-grant admin clearance to guest profiles so they can test admin tools!
-        blocked: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      localStorage.setItem('flowtalk_guest_user', JSON.stringify(mockUser));
-      localStorage.setItem('flowtalk_guest_profile', JSON.stringify(mockProfile));
-      localStorage.setItem('flowtalk_guest_txs', JSON.stringify([]));
-
-      setCurrentUser(mockUser);
-      setUserProfile(mockProfile);
-      setTransactions([]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const logout = async () => {
     localStorage.removeItem('flowtalk_guest_user');
     localStorage.removeItem('flowtalk_guest_profile');
@@ -293,16 +239,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateCustomApiKey = async (apiKey: string) => {
     if (!currentUser) return;
-    if (currentUser.uid.startsWith('guest_')) {
-      const updatedProfile: UserProfile = {
-        ...userProfile!,
-        customGeminiKey: apiKey.trim() || '',
-        updatedAt: new Date().toISOString()
-      };
-      setUserProfile(updatedProfile);
-      localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-      return;
-    }
 
     const userRef = doc(db, 'users', currentUser.uid);
     try {
@@ -317,16 +253,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateDisplayName = async (name: string) => {
     if (!currentUser) return;
-    if (currentUser.uid.startsWith('guest_')) {
-      const updatedProfile: UserProfile = {
-        ...userProfile!,
-        displayName: name.trim(),
-        updatedAt: new Date().toISOString()
-      };
-      setUserProfile(updatedProfile);
-      localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-      return;
-    }
 
     const userRef = doc(db, 'users', currentUser.uid);
     try {
@@ -341,16 +267,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateProfilePicture = async (url: string) => {
     if (!currentUser) return;
-    if (currentUser.uid.startsWith('guest_')) {
-      const updatedProfile: UserProfile = {
-        ...userProfile!,
-        profilePicture: url,
-        updatedAt: new Date().toISOString()
-      };
-      setUserProfile(updatedProfile);
-      localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-      return;
-    }
 
     const userRef = doc(db, 'users', currentUser.uid);
     try {
@@ -379,23 +295,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       timestamp: timestamp
     };
 
-    if (currentUser.uid.startsWith('guest_')) {
-      const existingTxsRaw = localStorage.getItem('flowtalk_guest_txs');
-      const existingTxs: TransactionRecord[] = existingTxsRaw ? JSON.parse(existingTxsRaw) : [];
-      const updatedTxs = [transaction, ...existingTxs];
-      localStorage.setItem('flowtalk_guest_txs', JSON.stringify(updatedTxs));
-      setTransactions(updatedTxs);
 
-      const updatedProfile: UserProfile = {
-        ...userProfile,
-        plan: planName,
-        credits: userProfile.credits + creditsAdded,
-        updatedAt: timestamp
-      };
-      setUserProfile(updatedProfile);
-      localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-      return;
-    }
 
     try {
       // 1. Log transaction in security ledger
@@ -422,16 +322,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (userProfile.plan === 'Enterprise') return;
     if (userProfile.credits <= 0) return;
 
-    if (currentUser.uid.startsWith('guest_')) {
-      const updatedProfile: UserProfile = {
-        ...userProfile,
-        credits: Math.max(0, userProfile.credits - 1),
-        updatedAt: new Date().toISOString()
-      };
-      setUserProfile(updatedProfile);
-      localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-      return;
-    }
+
 
     const userRef = doc(db, 'users', currentUser.uid);
     try {
@@ -447,104 +338,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Admin capabilities to pull all user metrics and user lists
   const refreshAdminData = async () => {
     if (!userProfile?.isAdmin) return;
-    if (currentUser && currentUser.uid.startsWith('guest_')) {
-      const guestTxsRaw = localStorage.getItem('flowtalk_guest_txs');
-      const guestTxs: TransactionRecord[] = guestTxsRaw ? JSON.parse(guestTxsRaw) : [];
-      
-      let mockUsers: UserProfile[] = [];
-      const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-      if (savedMockUsersRaw) {
-        mockUsers = JSON.parse(savedMockUsersRaw);
-        // Sync our current profile in mockUsers
-        const currentIdx = mockUsers.findIndex(u => u.uid === currentUser.uid);
-        if (currentIdx > -1) {
-          mockUsers[currentIdx] = {
-            ...mockUsers[currentIdx],
-            displayName: userProfile?.displayName || currentUser.displayName || 'Guest User',
-            plan: userProfile?.plan || 'Free',
-            credits: userProfile?.credits ?? 500,
-            customGeminiKey: userProfile?.customGeminiKey,
-            updatedAt: new Date().toISOString()
-          };
-        } else {
-          mockUsers.unshift({
-            uid: currentUser.uid,
-            email: currentUser.email || '',
-            displayName: userProfile?.displayName || currentUser.displayName || 'Guest User',
-            plan: userProfile?.plan || 'Free',
-            credits: userProfile?.credits ?? 500,
-            isAdmin: true,
-            blocked: false,
-            createdAt: userProfile?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            customGeminiKey: userProfile?.customGeminiKey
-          });
-        }
-      } else {
-        mockUsers = [
-          {
-            uid: currentUser.uid,
-            email: currentUser.email || '',
-            displayName: userProfile?.displayName || currentUser.displayName || 'Guest User',
-            plan: userProfile?.plan || 'Free',
-            credits: userProfile?.credits ?? 500,
-            isAdmin: true,
-            blocked: false,
-            createdAt: userProfile?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            customGeminiKey: userProfile?.customGeminiKey
-          },
-          {
-            uid: 'guest_mock_1',
-            email: 'designer@pixelcorp.com',
-            displayName: 'Alex Rivers',
-            plan: 'Pro',
-            credits: 1250,
-            isAdmin: false,
-            blocked: false,
-            createdAt: new Date(Date.now() - 345600000).toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            uid: 'guest_mock_2',
-            email: 'tech_lead@alphaflows.io',
-            displayName: 'Samantha Zhang',
-            plan: 'Enterprise',
-            credits: 9999,
-            isAdmin: false,
-            blocked: true,
-            createdAt: new Date(Date.now() - 864000000).toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ];
-      }
-      localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(mockUsers));
 
-      const staticTxs: TransactionRecord[] = [
-        {
-          id: 'tx_demo_101',
-          userId: 'guest_mock_1',
-          email: 'designer@pixelcorp.com',
-          plan: 'Pro',
-          amount: 49,
-          creditsAdded: 1500,
-          timestamp: new Date(Date.now() - 345600000).toISOString()
-        },
-        {
-          id: 'tx_demo_102',
-          userId: 'guest_mock_2',
-          email: 'tech_lead@alphaflows.io',
-          plan: 'Enterprise',
-          amount: 199,
-          creditsAdded: 5000,
-          timestamp: new Date(Date.now() - 864000000).toISOString()
-        }
-      ];
-
-      setAllUsers(mockUsers);
-      setAllTransactions([...guestTxs, ...staticTxs]);
-      return;
-    }
 
     try {
       // Pull all users
@@ -585,7 +379,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loginWithGoogle,
       loginWithEmail,
       registerWithEmail,
-      loginAsGuest,
       logout,
       updateCustomApiKey,
       updateDisplayName,

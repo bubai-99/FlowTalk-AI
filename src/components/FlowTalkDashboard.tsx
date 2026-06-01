@@ -308,26 +308,6 @@ export const FlowTalkDashboard: React.FC<FlowTalkDashboardProps> = ({
   const handleAdminUpdatePlan = async (targetUser: UserProfile, newPlan: 'Free' | 'Pro' | 'Enterprise') => {
     setLoadingAction(true);
     try {
-      if (currentUser?.uid.startsWith('guest_')) {
-        const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-        if (savedMockUsersRaw) {
-          const usersList: UserProfile[] = JSON.parse(savedMockUsersRaw);
-          const idx = usersList.findIndex(u => u.uid === targetUser.uid);
-          if (idx > -1) {
-            usersList[idx] = { ...usersList[idx], plan: newPlan, updatedAt: new Date().toISOString() };
-            if (targetUser.uid === currentUser.uid) {
-              const updatedProfile = { ...userProfile!, plan: newPlan, updatedAt: new Date().toISOString() };
-              localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-            }
-            localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(usersList));
-          }
-        }
-        setSelectedUser({ ...targetUser, plan: newPlan });
-        await refreshAdminData();
-        showToast(`Upgraded subscription license class to ${newPlan} for ${targetUser.displayName}.`);
-        return;
-      }
-
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, {
         plan: newPlan,
@@ -347,26 +327,6 @@ export const FlowTalkDashboard: React.FC<FlowTalkDashboardProps> = ({
     setLoadingAction(true);
     try {
       const newBalance = Math.max(0, targetUser.credits + amount);
-      if (currentUser?.uid.startsWith('guest_')) {
-        const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-        if (savedMockUsersRaw) {
-          const usersList: UserProfile[] = JSON.parse(savedMockUsersRaw);
-          const idx = usersList.findIndex(u => u.uid === targetUser.uid);
-          if (idx > -1) {
-            usersList[idx] = { ...usersList[idx], credits: newBalance, updatedAt: new Date().toISOString() };
-            if (targetUser.uid === currentUser.uid) {
-              const updatedProfile = { ...userProfile!, credits: newBalance, updatedAt: new Date().toISOString() };
-              localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-            }
-            localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(usersList));
-          }
-        }
-        setSelectedUser({ ...targetUser, credits: newBalance });
-        await refreshAdminData();
-        showToast(`Injected balance adjustment successfully for ${targetUser.displayName}.`);
-        return;
-      }
-
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, {
         credits: newBalance,
@@ -386,26 +346,6 @@ export const FlowTalkDashboard: React.FC<FlowTalkDashboardProps> = ({
     setLoadingAction(true);
     try {
       const newBlockedState = !targetUser.blocked;
-      if (currentUser?.uid.startsWith('guest_')) {
-        const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-        if (savedMockUsersRaw) {
-          const usersList: UserProfile[] = JSON.parse(savedMockUsersRaw);
-          const idx = usersList.findIndex(u => u.uid === targetUser.uid);
-          if (idx > -1) {
-            usersList[idx] = { ...usersList[idx], blocked: newBlockedState, updatedAt: new Date().toISOString() };
-            if (targetUser.uid === currentUser.uid) {
-              const updatedProfile = { ...userProfile!, blocked: newBlockedState, updatedAt: new Date().toISOString() };
-              localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-            }
-            localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(usersList));
-          }
-        }
-        setSelectedUser({ ...targetUser, blocked: newBlockedState });
-        await refreshAdminData();
-        showToast(newBlockedState ? 'User session access strictly suspended.' : 'User session clearance restored!');
-        return;
-      }
-
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, {
         blocked: newBlockedState,

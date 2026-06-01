@@ -122,21 +122,6 @@ export const DashboardPortal: React.FC<DashboardPortalProps> = ({ isOpen, onClos
   // Admin adjustments
   const handleAdminUpdatePlan = async (targetUser: UserProfile, newPlan: 'Free' | 'Pro' | 'Enterprise') => {
     try {
-      if (currentUser?.uid.startsWith('guest_')) {
-        const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-        if (savedMockUsersRaw) {
-          const usersList: UserProfile[] = JSON.parse(savedMockUsersRaw);
-          const idx = usersList.findIndex(u => u.uid === targetUser.uid);
-          if (idx > -1) {
-            usersList[idx] = { ...usersList[idx], plan: newPlan, updatedAt: new Date().toISOString() };
-            localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(usersList));
-          }
-        }
-        setSelectedAdminUser({ ...targetUser, plan: newPlan });
-        await refreshAdminData();
-        return;
-      }
-
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, {
         plan: newPlan,
@@ -153,26 +138,6 @@ export const DashboardPortal: React.FC<DashboardPortalProps> = ({ isOpen, onClos
   const handleAdminToggleBlock = async (targetUser: UserProfile) => {
     try {
       const newBlockedState = !targetUser.blocked;
-      if (currentUser?.uid.startsWith('guest_')) {
-        const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-        if (savedMockUsersRaw) {
-          const usersList: UserProfile[] = JSON.parse(savedMockUsersRaw);
-          const idx = usersList.findIndex(u => u.uid === targetUser.uid);
-          if (idx > -1) {
-            usersList[idx] = { ...usersList[idx], blocked: newBlockedState, updatedAt: new Date().toISOString() };
-            // If the user blocks themselves, update userProfile as well for deep observer suspension simulation
-            if (targetUser.uid === currentUser.uid) {
-              const updatedProfile = { ...userProfile!, blocked: newBlockedState, updatedAt: new Date().toISOString() };
-              localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-            }
-            localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(usersList));
-          }
-        }
-        setSelectedAdminUser({ ...targetUser, blocked: newBlockedState });
-        await refreshAdminData();
-        return;
-      }
-
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, {
         blocked: newBlockedState,
@@ -189,25 +154,6 @@ export const DashboardPortal: React.FC<DashboardPortalProps> = ({ isOpen, onClos
     try {
       const currentCredits = targetUser.credits;
       const newBalance = Math.max(0, currentCredits + amount);
-      if (currentUser?.uid.startsWith('guest_')) {
-        const savedMockUsersRaw = localStorage.getItem('flowtalk_guest_mock_users');
-        if (savedMockUsersRaw) {
-          const usersList: UserProfile[] = JSON.parse(savedMockUsersRaw);
-          const idx = usersList.findIndex(u => u.uid === targetUser.uid);
-          if (idx > -1) {
-            usersList[idx] = { ...usersList[idx], credits: newBalance, updatedAt: new Date().toISOString() };
-            if (targetUser.uid === currentUser.uid) {
-              const updatedProfile = { ...userProfile!, credits: newBalance, updatedAt: new Date().toISOString() };
-              localStorage.setItem('flowtalk_guest_profile', JSON.stringify(updatedProfile));
-            }
-            localStorage.setItem('flowtalk_guest_mock_users', JSON.stringify(usersList));
-          }
-        }
-        setSelectedAdminUser({ ...targetUser, credits: newBalance });
-        await refreshAdminData();
-        return;
-      }
-
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, {
         credits: newBalance,

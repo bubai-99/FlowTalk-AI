@@ -128,18 +128,6 @@ export const FlowTalkLanding: React.FC<FlowTalkLandingProps> = ({ onOpenControlP
       return;
     }
 
-    if (currentUser.uid.startsWith('guest_')) {
-      const loadGuestConversations = () => {
-        const saved = localStorage.getItem('flowtalk_guest_conversations');
-        setDbHistory(saved ? JSON.parse(saved) : []);
-      };
-      loadGuestConversations();
-      window.addEventListener('flowtalk_guest_conv_updated', loadGuestConversations);
-      return () => {
-        window.removeEventListener('flowtalk_guest_conv_updated', loadGuestConversations);
-      };
-    }
-
     const convColRef = collection(db, 'users', currentUser.uid, 'saved_conversations');
     const q = query(convColRef);
 
@@ -244,26 +232,11 @@ export const FlowTalkLanding: React.FC<FlowTalkLandingProps> = ({ onOpenControlP
       };
 
       if (currentUser) {
-        if (currentUser.uid.startsWith('guest_')) {
-          const customId = 'conv_' + Date.now();
-          const guestRec: SavedConversation = {
-            id: customId,
-            ...conversationRecord
-          };
-          const savedStr = localStorage.getItem('flowtalk_guest_conversations');
-          const saved: SavedConversation[] = savedStr ? JSON.parse(savedStr) : [];
-          const updated = [guestRec, ...saved];
-          localStorage.setItem('flowtalk_guest_conversations', JSON.stringify(updated));
-          window.dispatchEvent(new Event('flowtalk_guest_conv_updated'));
-          setJustSaved(true);
-          setTimeout(() => setJustSaved(false), 2000);
-        } else {
-          // Log deep observable write into user subcollection
-          const customId = 'conv_' + Date.now();
-          await setDoc(doc(db, 'users', currentUser.uid, 'saved_conversations', customId), conversationRecord);
-          setJustSaved(true);
-          setTimeout(() => setJustSaved(false), 2000);
-        }
+        // Log deep observable write into user subcollection
+        const customId = 'conv_' + Date.now();
+        await setDoc(doc(db, 'users', currentUser.uid, 'saved_conversations', customId), conversationRecord);
+        setJustSaved(true);
+        setTimeout(() => setJustSaved(false), 2000);
       } else {
         // fallback to standard locale arrays
         const localRec: SavedConversation = {
@@ -294,14 +267,6 @@ export const FlowTalkLanding: React.FC<FlowTalkLandingProps> = ({ onOpenControlP
 
   const deleteRecord = async (recordId: string) => {
     if (currentUser) {
-      if (currentUser.uid.startsWith('guest_')) {
-        const savedStr = localStorage.getItem('flowtalk_guest_conversations');
-        const saved: SavedConversation[] = savedStr ? JSON.parse(savedStr) : [];
-        const updated = saved.filter(item => item.id !== recordId);
-        localStorage.setItem('flowtalk_guest_conversations', JSON.stringify(updated));
-        window.dispatchEvent(new Event('flowtalk_guest_conv_updated'));
-        return;
-      }
       try {
         await deleteDoc(doc(db, 'users', currentUser.uid, 'saved_conversations', recordId));
       } catch (error) {
@@ -314,11 +279,6 @@ export const FlowTalkLanding: React.FC<FlowTalkLandingProps> = ({ onOpenControlP
 
   const clearRecords = async () => {
     if (currentUser) {
-      if (currentUser.uid.startsWith('guest_')) {
-        localStorage.setItem('flowtalk_guest_conversations', JSON.stringify([]));
-        window.dispatchEvent(new Event('flowtalk_guest_conv_updated'));
-        return;
-      }
       for (const conv of dbHistory) {
         try {
           await deleteDoc(doc(db, 'users', currentUser.uid, 'saved_conversations', conv.id));

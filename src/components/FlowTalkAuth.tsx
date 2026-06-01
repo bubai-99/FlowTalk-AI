@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useUser } from '../contexts/UserContext';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { 
   Mail, 
   Lock, 
@@ -25,7 +26,7 @@ export const FlowTalkAuth: React.FC<FlowTalkAuthProps> = ({
   onSuccess,
   onBack 
 }) => {
-  const { loginWithEmail, registerWithEmail, loginWithGoogle, loginAsGuest } = useUser();
+  const { loginWithEmail, registerWithEmail, loginWithGoogle } = useUser();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   
   // Form states
@@ -41,6 +42,9 @@ export const FlowTalkAuth: React.FC<FlowTalkAuthProps> = ({
   // Parse Firebase authentication errors to something friendly
   const formatAuthError = (err: any) => {
     const code = err?.code || '';
+    if (code.includes('auth/operation-not-allowed')) {
+      return 'operation-not-allowed';
+    }
     if (code.includes('auth/invalid-credential') || code.includes('auth/wrong-password')) {
       return 'The email or password does not match. Please verify and try again.';
     }
@@ -86,26 +90,6 @@ export const FlowTalkAuth: React.FC<FlowTalkAuthProps> = ({
     } catch (err) {
       setErrorMsg(formatAuthError(err));
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setErrorMsg(null);
-    setLoading(true);
-    try {
-      const randomId = Math.floor(100000 + Math.random() * 900000);
-      const guestEmail = `guest_${randomId}@flowtalk.io`;
-      const guestName = `Guest Developer #${randomId}`;
-
-      await loginAsGuest(guestEmail, guestName);
-      setSuccess(true);
-      setTimeout(() => {
-        if (onSuccess) onSuccess();
-      }, 1500);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(`Authentication failed: ${formatAuthError(err)}`);
       setLoading(false);
     }
   };
@@ -217,10 +201,44 @@ export const FlowTalkAuth: React.FC<FlowTalkAuthProps> = ({
                 <motion.div 
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-2xl text-xs text-rose-300 flex gap-2.5 items-start font-semibold"
+                  className="space-y-3"
                 >
-                  <ShieldAlert size={16} className="text-rose-450 shrink-0 mt-0.5" />
-                  <span>{errorMsg}</span>
+                  {errorMsg === 'operation-not-allowed' ? (
+                    <div className="p-4 bg-gradient-to-r from-amber-950/40 via-amber-900/10 to-amber-950/40 border border-amber-500/30 rounded-2xl text-xs text-amber-200/90 space-y-2.5">
+                      <div className="flex gap-2 items-start font-bold">
+                        <ShieldAlert size={18} className="text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                        <span className="uppercase tracking-wider text-[11px]">Authentication Provider Disabled</span>
+                      </div>
+                      <p className="leading-relaxed text-slate-300 text-[11px] font-medium">
+                        Your Firebase project currently has sign-in providers disabled. You need to enable them in your Firebase Web Console.
+                      </p>
+                      <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 text-[11px] space-y-1.5 text-slate-350 font-semibold">
+                        <span className="font-bold text-slate-100 block text-[10px] uppercase tracking-wider mb-1">Quick Steps:</span>
+                        <div className="flex items-start gap-1.5 leading-normal">
+                          <span className="text-amber-400 font-bold">1.</span> Open your Firebase Web Console.
+                        </div>
+                        <div className="flex items-start gap-1.5 leading-normal">
+                          <span className="text-amber-400 font-bold">2.</span> Nav to <strong className="text-white">Authentication &rarr; Sign-in method</strong>.
+                        </div>
+                        <div className="flex items-start gap-1.5 leading-normal">
+                          <span className="text-amber-400 font-bold">3.</span> Enable <strong className="text-white">Email/Password</strong> and/or <strong className="text-white">Google</strong> providers.
+                        </div>
+                      </div>
+                      <a 
+                        href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`}
+                        target="_blank" 
+                        referrerPolicy="no-referrer"
+                        className="inline-flex w-full items-center justify-center gap-1.5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-xs uppercase tracking-wider transition-all duration-150 outline-none shadow-md"
+                      >
+                        Open Firebase Console &rarr;
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-2xl text-xs text-rose-300 flex gap-2.5 items-start font-semibold">
+                      <ShieldAlert size={16} className="text-rose-450 shrink-0 mt-0.5" />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -291,17 +309,6 @@ export const FlowTalkAuth: React.FC<FlowTalkAuthProps> = ({
                     <ArrowRight size={12} />
                   </>
                 )}
-              </button>
-
-              {/* QUICK GUEST DEMO ACCESS */}
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-emerald-600/10 to-teal-600/10 hover:from-emerald-600/20 hover:to-teal-600/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 outline-none shadow-sm disabled:opacity-50"
-              >
-                <Sparkles size={13} className="text-emerald-400 animate-pulse" />
-                <span>Quick Demo Access (No Signup)</span>
               </button>
 
               {/* GOOGLE FEDERATION DIVIDER */}

@@ -85,7 +85,7 @@ export default function App() {
                 currentTab === 'product' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Product & Demo
+              Home & Playground
             </button>
             <button 
               onClick={() => setCurrentTab('install')}
@@ -142,7 +142,6 @@ export default function App() {
           </div>
         ) : (
           <div className="flex items-center space-x-2 text-xs font-sans">
-            <span className="text-[10px] text-slate-500 hidden lg:inline mr-2"><Coins size={10} className="inline mr-1 text-slate-600" /> Demo sandbox state</span>
             <button 
               onClick={() => setCurrentTab('login')}
               className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
