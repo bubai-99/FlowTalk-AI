@@ -43,6 +43,21 @@ export default function App() {
     setIsOverlayOpen(false);
   };
 
+  const isStandalone = new URLSearchParams(window.location.search).get('standalone') === 'true';
+
+  if (isStandalone) {
+    return (
+      <div className="relative h-screen w-full bg-slate-900 overflow-hidden font-sans">
+        <FlowTalkOverlay 
+          isOpen={true} 
+          onClose={() => {}} 
+          onInsert={() => {}}
+          bubblePosition={{x: 20, y: window.innerHeight - 80}}
+        />
+      </div>
+    );
+  }
+
   // 1. Suspension Gate matching real-time admin blocking controls
   if (userProfile?.blocked) {
     return (
